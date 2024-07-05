@@ -34,7 +34,7 @@ RUN \
       build-essential=12.9 \
       python3-dev=3.11.2-1+b1 \
       zlib1g-dev=1:1.2.13.dfsg-1 \
-      libjpeg-dev=1:2.1.5-2 \1
+      libjpeg-dev=1:2.1.5-2 \
       libfreetype-dev=2.12.1+dfsg-5+deb12u3 \
       libssl-dev=3.0.13-1~deb12u1 \
       libffi-dev=3.4.4-1 \
