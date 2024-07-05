@@ -1,4 +1,4 @@
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -20,9 +20,9 @@ RUN \
       /var/lib/apt/lists/* \
       /usr/src/*
 
-FROM base as base-amd64
-FROM base as base-arm64
-FROM base as base-armv7
+FROM base AS base-amd64
+FROM base AS base-arm64
+FROM base AS base-armv7
 
 ENV UV_EXTRA_INDEX_URL=https://www.piwheels.org/simple
 ENV PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
@@ -54,7 +54,7 @@ RUN ln -s /lib/arm-linux-gnueabihf/ld-linux-armhf.so.3 /lib/ld-linux.so.3
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-FROM base-${TARGETARCH}${TARGETVARIANT} as final
+FROM base-${TARGETARCH}${TARGETVARIANT} AS final
 
 ENV UV_SYSTEM_PYTHON=true
 
