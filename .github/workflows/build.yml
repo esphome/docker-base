@@ -58,7 +58,7 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           target: final
           cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache
-          cache-to: ${{ github.event_name == 'release' && 'type=registry,ref=ghcr.io/esphome/docker-base:cache' || '' }}
+          cache-to: ${{ github.event_name == 'release' && 'type=registry,ref=ghcr.io/esphome/docker-base:cache,mode=max' || '' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/esphome/docker-base:${{ steps.get_tag.outputs.version }}
