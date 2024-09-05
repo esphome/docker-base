@@ -59,6 +59,3 @@ FROM base-${TARGETARCH}${TARGETVARIANT} AS final
 ENV UV_SYSTEM_PYTHON=true
 
 RUN pip install uv==0.2.21
-
-RUN ls -al
-
