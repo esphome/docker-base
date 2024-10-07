@@ -14,8 +14,14 @@ permissions:
 
 jobs:
   build:
-    name: Build
+    name: Build ${{ matrix.base }} image
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        base:
+          - debian
+          - alpine
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -49,19 +55,34 @@ jobs:
           fi
           echo version="$version" >> $GITHUB_OUTPUT
 
-      - name: Build image
-        id: build
+      - name: Build base image
         uses: docker/build-push-action@v6.7.0
         env:
           DOCKER_BUILD_SUMMARY: false
           DOCKER_BUILD_RECORD_UPLOAD: false
         with:
-          context: .
-          file: ./Dockerfile
+          context: ${{ matrix.base }}
+          file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm/v7,linux/arm64
-          target: final
-          cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache
-          cache-to: ${{ github.event_name == 'release' && 'type=registry,ref=ghcr.io/esphome/docker-base:cache,mode=max' || '' }}
+          target: docker
+          cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ghcr.io/esphome/docker-base:${{ steps.get_tag.outputs.version }}
+            ghcr.io/esphome/docker-base:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
+
+      - name: Build ha-addon image
+        uses: docker/build-push-action@v6.7.0
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: ${{ matrix.base }}
+          file: ./${{ matrix.base }}/Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          target: ha-addon
+          cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
