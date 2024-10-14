@@ -8,7 +8,7 @@ RUN \
   && apk add --no-cache \
       bash=5.2.26-r0 \
       git=2.45.2-r0 \
-      curl=8.10.0-r0 \
+      curl=8.10.1-r0 \
       openssh-client=9.7_p1-r4 \
       cairo=1.18.0-r0 \
       libmagic=5.45-r1 \
