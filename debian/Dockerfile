@@ -30,7 +30,7 @@ RUN \
     set -x \
     && apt update \
     && apt install -y --no-install-recommends \
-        nginx-light=1.22.1-9 \
+        nginx-light=1.22.1-9+deb12u1 \
         jq=1.6-2.1 \
         xz-utils=5.4.1-0.2 \
     && rm -rf \
