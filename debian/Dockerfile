@@ -20,6 +20,8 @@ RUN \
       /var/lib/apt/lists/* \
       /usr/src/*
 
+RUN usermod -U root -a -G staff
+
 ENV UV_SYSTEM_PYTHON=true
 ENV PIP_ROOT_USER_ACTION=ignore
 
