@@ -34,12 +34,24 @@ jobs:
           platforms: linux/arm64,linux/arm/v7
 
 
+      - name: Compute image name
+        id: image
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            owner="${{ github.event.pull_request.head.repo.owner.login }}"
+            repo="${{ github.event.pull_request.head.repo.name }}"
+          else
+            owner="${{ github.repository_owner }}"
+            repo="${{ github.repository }}"
+            repo="${repo##*/}"
+          fi
+          echo "image=ghcr.io/${owner}/${repo}" >> "$GITHUB_OUTPUT"
+
       - name: Log in to the GitHub container registry
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get tag
@@ -65,11 +77,11 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: base
-          cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
-          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          push: true
           tags: |
-            ghcr.io/esphome/docker-base:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
+            ${{ steps.image.outputs.image }}:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
 
       - name: Build ha-addon image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
@@ -81,8 +93,8 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: ha-addon
-          cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
-          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          push: true
           tags: |
-            ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
+            ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
