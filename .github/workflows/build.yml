@@ -1,4 +1,4 @@
-name: Build ESPHome base container image
+name: Build
 
 on:
   pull_request:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.base }} image
+    name: ${{ matrix.base }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,7 +35,7 @@ jobs:
 
 
       - name: Log in to the GitHub container registry
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3.4.0
         with:
           registry: ghcr.io
@@ -67,7 +67,7 @@ jobs:
           target: base
           cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
           cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           tags: |
             ghcr.io/esphome/docker-base:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
 
@@ -83,6 +83,6 @@ jobs:
           target: ha-addon
           cache-from: type=registry,ref=ghcr.io/esphome/docker-base:cache-${{ matrix.base }}
           cache-to: ${{ github.event_name == 'release' && format('type=registry,ref=ghcr.io/esphome/docker-base:cache-{0},mode=max', matrix.base) || '' }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           tags: |
             ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
