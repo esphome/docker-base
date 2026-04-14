@@ -1,4 +1,4 @@
-FROM python:3.12-alpine3.20 AS base
+FROM python:3.13-alpine3.22 AS base
 
 ENV \
     UV_EXTRA_INDEX_URL=https://wheels.home-assistant.io/musllinux-index/
@@ -6,13 +6,13 @@ ENV \
 RUN \
   set -x \
   && apk add --no-cache \
-      bash=5.2.26-r0 \
-      git=2.45.3-r0 \
-      curl=8.12.1-r0 \
-      openssh-client=9.7_p1-r5 \
-      cairo=1.18.0-r0 \
-      libmagic=5.45-r1 \
-      patch=2.7.6-r10
+      bash=5.2.37-r0 \
+      git=2.49.1-r0 \
+      curl=8.14.1-r2 \
+      openssh-client-default=10.0_p1-r10 \
+      cairo=1.18.4-r0 \
+      libmagic=5.46-r2 \
+      patch=2.8-r0
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -25,14 +25,14 @@ FROM base AS ha-addon
 RUN \
     set -x \
     && apk add --no-cache \
-        nginx=1.26.3-r0 \
-        jq=1.7.1-r0 \
-        xz=5.6.2-r1
+        nginx=1.28.3-r0 \
+        jq=1.8.1-r0 \
+        xz=5.8.1-r0
 
 ARG \
-    BASHIO_VERSION=0.16.3 \
+    BASHIO_VERSION=0.17.5 \
     TEMPIO_VERSION=2024.11.2 \
-    S6_OVERLAY_VERSION=3.2.0.2
+    S6_OVERLAY_VERSION=3.2.2.0
 
 WORKDIR /usr/src
 
