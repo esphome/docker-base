@@ -1,0 +1,84 @@
+esphome:
+  name: docker-base-test
+  friendly_name: Docker Base Test
+
+esp32:
+  variant: esp32s3
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: "ksNFMwnPMiTG7mMBYFHqmeqHjiwEGTGKGufWbUaEWBY="
+
+ota:
+  - platform: esphome
+    password: "test_password"
+
+wifi:
+  ssid: "TestSSID"
+  password: "TestPassword"
+  ap:
+    ssid: "Test Fallback"
+    password: "FallbackPassword"
+
+captive_portal:
+
+web_server:
+  port: 80
+
+sensor:
+  - platform: adc
+    pin: GPIO1
+    name: "ADC Sensor"
+    update_interval: 60s
+
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+  - platform: uptime
+    name: "Uptime"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO4
+      mode:
+        input: true
+        pullup: true
+    name: "Button"
+
+  - platform: status
+    name: "Status"
+
+switch:
+  - platform: gpio
+    pin: GPIO5
+    name: "Relay"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+    ssid:
+      name: "Connected SSID"
+
+output:
+  - platform: ledc
+    pin: GPIO6
+    id: led_output
+
+light:
+  - platform: monochromatic
+    output: led_output
+    name: "LED"
+
+i2c:
+  sda: GPIO8
+  scl: GPIO9
+
+status_led:
+  pin: GPIO38
