@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.13-slim-trixie AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -6,13 +6,13 @@ RUN \
   set -x \
   && apt update \
   && apt install -y --no-install-recommends \
-      iputils-ping=3:20221126-1+deb12u1 \
-      git=1:2.39.5-0+deb12u2 \
-      curl=7.88.1-10+deb12u12 \
-      openssh-client=1:9.2p1-2+deb12u5 \
-      libcairo2=1.16.0-7 \
-      libmagic1=1:5.44-3 \
-      patch=2.7.6-7 \
+      iputils-ping=3:20240905-3 \
+      git=1:2.47.3-0+deb13u1 \
+      curl=8.14.1-2+deb13u2 \
+      openssh-client=1:10.0p1-7+deb13u2 \
+      libcairo2=1.18.4-1+b1 \
+      libmagic1t64=1:5.46-5 \
+      patch=2.8-2 \
   && apt purge -y --auto-remove \
   && rm -rf \
       /tmp/* \
@@ -30,9 +30,9 @@ RUN \
     set -x \
     && apt update \
     && apt install -y --no-install-recommends \
-        nginx-light=1.22.1-9+deb12u1 \
-        jq=1.6-2.1 \
-        xz-utils=5.4.1-0.2 \
+        nginx-light=1.26.3-3+deb13u2 \
+        jq=1.7.1-6+deb13u1 \
+        xz-utils=5.8.1-1 \
     && rm -rf \
         /tmp/* \
         /var/{cache,log}/* \
@@ -40,9 +40,9 @@ RUN \
         /usr/src/*
 
 ARG \
-    BASHIO_VERSION=0.16.3 \
+    BASHIO_VERSION=0.17.5 \
     TEMPIO_VERSION=2024.11.2 \
-    S6_OVERLAY_VERSION=3.2.0.2
+    S6_OVERLAY_VERSION=3.2.2.0
 
 WORKDIR /usr/src
 
