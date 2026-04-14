@@ -98,3 +98,70 @@ jobs:
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
+
+  build-test:
+    name: Build test (${{ matrix.base }})
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        base:
+          - debian
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Log in to the GitHub container registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clone ESPHome repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          repository: esphome/esphome
+          ref: dev
+          path: esphome
+
+      - name: Re-tag PR base image for ESPHome Dockerfile
+        run: |
+          pr_tag="pr-${{ github.event.pull_request.number }}"
+          pr_image="ghcr.io/${{ github.event.pull_request.head.repo.owner.login }}/${{ github.event.pull_request.head.repo.name }}:${{ matrix.base }}-${pr_tag}"
+          # Pull the PR base image
+          docker pull "${pr_image}"
+          # Re-tag to match what ESPHome's Dockerfile expects:
+          #   FROM ghcr.io/esphome/docker-base:${BUILD_OS}-${BUILD_BASE_VERSION}
+          docker tag "${pr_image}" "ghcr.io/esphome/docker-base:${{ matrix.base }}-${pr_tag}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+        with:
+          driver: docker
+
+      - name: Build ESPHome image using ESPHome Dockerfile
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: ./esphome
+          file: ./esphome/docker/Dockerfile
+          target: final
+          build-args: |
+            BUILD_TYPE=docker
+            BUILD_VERSION=ci
+            BUILD_OS=${{ matrix.base }}
+            BUILD_BASE_VERSION=pr-${{ github.event.pull_request.number }}
+          load: true
+          tags: esphome-test:latest
+
+      - name: Compile test ESP32 config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/tests:/tests \
+            esphome-test:latest \
+            compile /tests/test-esp32.yaml
