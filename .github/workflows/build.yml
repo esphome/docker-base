@@ -165,4 +165,4 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}/tests:/tests \
             esphome-test:latest \
-            esphome compile /tests/test-esp32.yaml
+            compile /tests/test-esp32.yaml
