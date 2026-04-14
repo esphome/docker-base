@@ -12,9 +12,7 @@ RUN \
       openssh-client-default=10.0_p1-r10 \
       cairo=1.18.4-r0 \
       libmagic=5.46-r2 \
-      patch=2.8-r0 \
-      cmake=3.31.7-r1 \
-      samurai=1.2-r7
+      patch=2.8-r0
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
