@@ -32,7 +32,6 @@ RUN \
     set -x \
     && apt update \
     && apt install -y --no-install-recommends \
-        nginx-light=1.26.3-3+deb13u6 \
         jq=1.7.1-6+deb13u2 \
         xz-utils=5.8.1-1 \
     && rm -rf \
