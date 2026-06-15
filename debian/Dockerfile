@@ -8,8 +8,8 @@ RUN \
   && apt install -y --no-install-recommends \
       iputils-ping=3:20240905-3 \
       git=1:2.47.3-0+deb13u1 \
-      curl=8.14.1-2+deb13u2 \
-      openssh-client=1:10.0p1-7+deb13u2 \
+      curl=8.14.1-2+deb13u3 \
+      openssh-client=1:10.0p1-7+deb13u4 \
       libcairo2=1.18.4-1+b1 \
       libmagic1t64=1:5.46-5 \
       patch=2.8-2 \
@@ -32,8 +32,8 @@ RUN \
     set -x \
     && apt update \
     && apt install -y --no-install-recommends \
-        nginx-light=1.26.3-3+deb13u2 \
-        jq=1.7.1-6+deb13u1 \
+        nginx-light=1.26.3-3+deb13u6 \
+        jq=1.7.1-6+deb13u2 \
         xz-utils=5.8.1-1 \
     && rm -rf \
         /tmp/* \
