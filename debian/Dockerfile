@@ -41,7 +41,7 @@ RUN \
         /usr/src/*
 
 # renovate: datasource=github-releases depName=hassio-addons/bashio
-ARG BASHIO_VERSION=0.17.5
+ARG BASHIO_VERSION=0.18.1
 # renovate: datasource=github-releases depName=home-assistant/tempio versioning=loose
 ARG TEMPIO_VERSION=2024.11.2
 # renovate: datasource=github-releases depName=just-containers/s6-overlay versioning=loose
