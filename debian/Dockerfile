@@ -13,6 +13,8 @@ RUN \
       libcairo2=1.18.4-1+b1 \
       libmagic1t64=1:5.46-5 \
       patch=2.8-2 \
+      build-essential=12.12 \
+      libusb-1.0-0=2:1.0.28-1 \
       ccache=4.11.2-2 \
   && apt purge -y --auto-remove \
   && rm -rf \
