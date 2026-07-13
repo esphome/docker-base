@@ -36,7 +36,7 @@ RUN \
     && apt update \
     && apt install -y --no-install-recommends \
         jq=1.7.1-6+deb13u2 \
-        xz-utils=5.8.1-1 \
+        xz-utils=5.8.1-1+deb13u1 \
     && rm -rf \
         /tmp/* \
         /var/{cache,log}/* \
