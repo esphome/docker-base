@@ -8,7 +8,7 @@ RUN \
   && apt install -y --no-install-recommends \
       iputils-ping=3:20240905-3 \
       git=1:2.47.3-0+deb13u1 \
-      curl=8.14.1-2+deb13u3 \
+      curl=8.14.1-2+deb13u4 \
       openssh-client=1:10.0p1-7+deb13u4 \
       libcairo2=1.18.4-1+b1 \
       libmagic1t64=1:5.46-5 \
