@@ -46,7 +46,7 @@ RUN \
 # renovate: datasource=github-releases depName=hassio-addons/bashio
 ARG BASHIO_VERSION=0.18.1
 # renovate: datasource=github-releases depName=home-assistant/tempio versioning=loose
-ARG TEMPIO_VERSION=2026.05.0
+ARG TEMPIO_VERSION=2026.07.0
 # renovate: datasource=github-releases depName=just-containers/s6-overlay versioning=loose
 ARG S6_OVERLAY_VERSION=3.2.3.0
 
