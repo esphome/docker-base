@@ -66,6 +66,24 @@ jobs:
           fi
           echo version="$version" >> $GITHUB_OUTPUT
 
+      - name: Build runtime image
+        id: build-runtime
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: ${{ matrix.base }}
+          file: ./${{ matrix.base }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          target: runtime
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}:${{ matrix.base }}-runtime-${{ steps.get_tag.outputs.version }}
+
       - name: Build base image
         id: build-base
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
@@ -84,6 +102,24 @@ jobs:
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
+
+      - name: Build ha-addon-runtime image
+        id: build-ha-addon-runtime
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: ${{ matrix.base }}
+          file: ./${{ matrix.base }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          target: ha-addon-runtime
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          push: true
+          tags: |
+            ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-runtime-${{ steps.get_tag.outputs.version }}
 
       - name: Build ha-addon image
         id: build-ha-addon
@@ -114,12 +150,30 @@ jobs:
             -f ./${{ matrix.base }}/Dockerfile \
             ./${{ matrix.base }}
 
+      - name: Build runtime image (local)
+        if: github.event_name == 'pull_request' && matrix.base == 'debian'
+        run: |
+          docker build \
+            --target runtime \
+            -t "ghcr.io/esphome/docker-base:${{ matrix.base }}-runtime-pr-${{ github.event.pull_request.number }}" \
+            -f ./${{ matrix.base }}/Dockerfile \
+            ./${{ matrix.base }}
+
       - name: Build ha-addon image (local)
         if: github.event_name == 'pull_request' && matrix.base == 'debian'
         run: |
           docker build \
             --target ha-addon \
             -t "ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-pr-${{ github.event.pull_request.number }}" \
+            -f ./${{ matrix.base }}/Dockerfile \
+            ./${{ matrix.base }}
+
+      - name: Build ha-addon-runtime image (local)
+        if: github.event_name == 'pull_request' && matrix.base == 'debian'
+        run: |
+          docker build \
+            --target ha-addon-runtime \
+            -t "ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-runtime-pr-${{ github.event.pull_request.number }}" \
             -f ./${{ matrix.base }}/Dockerfile \
             ./${{ matrix.base }}
 
@@ -138,7 +192,6 @@ jobs:
             --target final \
             --build-arg BUILD_TYPE=docker \
             --build-arg BUILD_VERSION=ci \
-            --build-arg "BUILD_OS=${{ matrix.base }}" \
             --build-arg "BUILD_BASE_VERSION=pr-${{ github.event.pull_request.number }}" \
             -t esphome-test:latest \
             -f ./esphome/docker/Dockerfile \

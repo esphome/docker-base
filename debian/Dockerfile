@@ -1,7 +1,8 @@
-FROM python:3.14-slim-trixie AS base
+FROM python:3.14-slim-trixie AS runtime
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Runtime-only packages (no compiler toolchain)
 RUN \
   set -x \
   && apt update \
@@ -13,9 +14,7 @@ RUN \
       libcairo2=1.18.4-1+b1 \
       libmagic1t64=1:5.46-5 \
       patch=2.8-2 \
-      build-essential=12.12 \
       libusb-1.0-0=2:1.0.28-1 \
-      ccache=4.11.2-2 \
   && apt purge -y --auto-remove \
   && rm -rf \
       /tmp/* \
@@ -29,7 +28,24 @@ ENV UV_SYSTEM_PYTHON=true
 ENV PIP_ROOT_USER_ACTION=ignore
 
 
-FROM base AS ha-addon
+# Builder stage: runtime + build-essential for compiling native Python extensions
+FROM runtime AS base
+
+RUN \
+  set -x \
+  && apt update \
+  && apt install -y --no-install-recommends \
+      build-essential=12.12 \
+      ccache=4.11.2-2 \
+  && apt purge -y --auto-remove \
+  && rm -rf \
+      /tmp/* \
+      /var/{cache,log}/* \
+      /var/lib/apt/lists/* \
+      /usr/src/*
+
+
+FROM runtime AS ha-addon-runtime
 
 RUN \
     set -x \
@@ -90,3 +106,20 @@ RUN \
 
 WORKDIR /root
 ENTRYPOINT ["/init"]
+
+
+# ha-addon with build tools (for pip install of native extensions)
+FROM ha-addon-runtime AS ha-addon
+
+RUN \
+  set -x \
+  && apt update \
+  && apt install -y --no-install-recommends \
+      build-essential=12.12 \
+      ccache=4.11.2-2 \
+  && apt purge -y --auto-remove \
+  && rm -rf \
+      /tmp/* \
+      /var/{cache,log}/* \
+      /var/lib/apt/lists/* \
+      /usr/src/*
