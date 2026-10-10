@@ -78,8 +78,8 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: runtime
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}-runtime
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1}-runtime,mode=max', steps.image.outputs.image, matrix.base) || '' }}
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-runtime-${{ steps.get_tag.outputs.version }}
@@ -97,8 +97,8 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: base
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}-base
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1}-base,mode=max', steps.image.outputs.image, matrix.base) || '' }}
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
@@ -115,8 +115,8 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: ha-addon-runtime
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}-ha-addon-runtime
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1}-ha-addon-runtime,mode=max', steps.image.outputs.image, matrix.base) || '' }}
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-runtime-${{ steps.get_tag.outputs.version }}
@@ -134,8 +134,8 @@ jobs:
           file: ./${{ matrix.base }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           target: ha-addon
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}-ha-addon
+          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1}-ha-addon,mode=max', steps.image.outputs.image, matrix.base) || '' }}
           push: true
           tags: |
             ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
