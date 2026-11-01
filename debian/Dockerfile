@@ -14,7 +14,7 @@ RUN \
       libmagic1t64=1:5.46-5 \
       patch=2.8-2 \
       build-essential=12.12 \
-      libssl-dev=3.5.7-1~deb13u2 \
+      libssl-dev=3.5.7-1~deb13u3 \
       libusb-1.0-0=2:1.0.28-1 \
       ccache=4.11.2-2 \
   && apt purge -y --auto-remove \
