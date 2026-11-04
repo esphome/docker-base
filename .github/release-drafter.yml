@@ -1,0 +1,16 @@
+name-template: "$RESOLVED_VERSION"
+tag-template: "$RESOLVED_VERSION"
+change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
+categories:
+  - title: Dependencies
+    labels:
+      - dependencies
+template: |
+  <!-- build-status -->
+  > [!WARNING]
+  > The images for this draft are still being built. Do not publish this release yet.
+  <!-- /build-status -->
+
+  ## Changes
+
+  $CHANGES

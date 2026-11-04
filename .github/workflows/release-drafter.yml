@@ -1,0 +1,57 @@
+name: Release Drafter
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-drafter
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Draft release
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Generate a token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.ESPHOME_GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ESPHOME_GITHUB_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: read
+
+      - name: Compute next version
+        id: version
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          prefix=$(date -u +%Y.%m)
+          if ! tags=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 200 --json tagName --jq '.[].tagName'); then
+            echo "::error::Failed to list releases."
+            exit 1
+          fi
+          # Highest N among tags exactly matching <prefix>.N (pre-release tags do not match)
+          last=""
+          if [ -n "$tags" ]; then
+            last=$(grep -E "^${prefix//./\\.}\.[0-9]+$" <<< "$tags" | sed -E 's/^.*\.//' | sort -n | tail -n 1 || true)
+          fi
+          if [ -n "$last" ]; then
+            next=$((last + 1))
+          else
+            next=0
+          fi
+          echo "version=${prefix}.${next}" >> "$GITHUB_OUTPUT"
+
+      - name: Draft release
+        uses: release-drafter/release-drafter@v7.10.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          version: ${{ steps.version.outputs.version }}
+          commitish: ${{ github.sha }}

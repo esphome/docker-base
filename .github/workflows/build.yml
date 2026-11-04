@@ -1,153 +1,169 @@
 name: Build
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: [Release Drafter]
+    types: [completed]
     branches: [main]
-  release:
-    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag suffix (defaults to the branch or tag name with / replaced by -)
+        type: string
+        required: false
 
+permissions: {}
 
-permissions:
-  contents: read
-  packages: write
+concurrency:
+  # Manual runs get their own group so they never cancel (or are cancelled by) the main draft build
+  group: build-${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: ${{ matrix.base }}
+  prepare:
+    name: Prepare
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        base:
-          - debian
+    permissions: {}
+    outputs:
+      ref: ${{ steps.prepare.outputs.ref }}
+      tag: ${{ steps.prepare.outputs.tag }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.4.1
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4.4.0
-        with:
-          platforms: linux/arm64,linux/arm/v7
-
-
-      - name: Compute image name
-        id: image
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            owner="${{ github.event.pull_request.head.repo.owner.login }}"
-            repo="${{ github.event.pull_request.head.repo.name }}"
-          else
-            owner="${{ github.repository_owner }}"
-            repo="${{ github.repository }}"
-            repo="${repo##*/}"
-          fi
-          echo "image=ghcr.io/${owner}/${repo}" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to the GitHub container registry
-        uses: docker/login-action@v4.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get tag
-        id: get_tag
-        run: |-
-          if [[ "${{ github.event_name }}" = "release" ]]; then
-            version="${{ github.event.release.tag_name}}"
-          elif [[ "${{ github.event_name }}" = "pull_request" ]]; then
-            version="pr-${{ github.event.pull_request.number }}"
-          else
-            version=${GITHUB_REF#refs/heads/}
-            version=${version//\//-}
-          fi
-          echo version="$version" >> $GITHUB_OUTPUT
-
-      - name: Build base image
-        id: build-base
-        uses: docker/build-push-action@v7.4.0
-        # Push is best-effort on PRs; fork tokens may lack package write access
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+      - name: Determine ref and tag
+        id: prepare
         env:
-          DOCKER_BUILD_SUMMARY: false
-          DOCKER_BUILD_RECORD_UPLOAD: false
-        with:
-          context: ${{ matrix.base }}
-          file: ./${{ matrix.base }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          target: base
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
-          push: true
-          tags: |
-            ${{ steps.image.outputs.image }}:${{ matrix.base }}-${{ steps.get_tag.outputs.version }}
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$EVENT" = "workflow_run" ]; then
+            ref="$RUN_SHA"
+            tag="$RUN_SHA"
+          else
+            ref="$SHA"
+            tag="$INPUT_TAG"
+            if [ -z "$tag" ]; then
+              tag="${REF_NAME//\//-}"
+            fi
 
-      - name: Build ha-addon image
-        id: build-ha-addon
-        uses: docker/build-push-action@v7.4.0
-        # Push is best-effort on PRs; fork tokens may lack package write access
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
+            # Docker tag charset; 112 max leaves room for the debian-ha-addon- prefix within Docker's 128 limit
+            if [[ ! "$tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,111}$ ]]; then
+              echo "::error::Invalid image tag '$tag'. Use 1-112 characters from A-Z a-z 0-9 _ . - and do not start with . or -. Set the tag input to override."
+              exit 1
+            fi
+            if [[ "$tag" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]+ ]]; then
+              echo "::error::Refusing version-shaped tag '$tag'. Version tags are only applied by the Release workflow when a draft release is published."
+              exit 1
+            fi
+            if [[ "$tag" =~ ^[0-9a-f]{40}$ && "$tag" != "$SHA" ]]; then
+              echo "::error::Refusing tag '$tag': 40-character hex tags are reserved for the draft release builds."
+              exit 1
+            fi
+
+            image="ghcr.io/${REPO,,}"
+            {
+              echo "Pushing:"
+              echo "- \`$image:debian-$tag\`"
+              echo "- \`$image:debian-ha-addon-$tag\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          {
+            echo "ref=$ref"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-images.yml
+    with:
+      ref: ${{ needs.prepare.outputs.ref }}
+      image: ghcr.io/${{ github.repository }}
+      tag: ${{ needs.prepare.outputs.tag }}
+      # Manual builds of arbitrary branches must not overwrite the main build cache
+      write-cache: ${{ github.event_name == 'workflow_run' }}
+
+  build-status:
+    name: Update draft release
+    needs: build
+    if: ${{ !cancelled() && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Generate a token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.ESPHOME_GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ESPHOME_GITHUB_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Update build status in draft release
         env:
-          DOCKER_BUILD_SUMMARY: false
-          DOCKER_BUILD_RECORD_UPLOAD: false
-        with:
-          context: ${{ matrix.base }}
-          file: ./${{ matrix.base }}/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          target: ha-addon
-          cache-from: type=registry,ref=${{ steps.image.outputs.image }}:cache-${{ matrix.base }}
-          cache-to: ${{ github.event_name == 'release' && format('type=registry,ref={0}:cache-{1},mode=max', steps.image.outputs.image, matrix.base) || '' }}
-          push: true
-          tags: |
-            ${{ steps.image.outputs.image }}:${{ matrix.base }}-ha-addon-${{ steps.get_tag.outputs.version }}
-
-      # Integration test: build ESPHome on top of the base image (PR + debian only)
-      - name: Build base image (local)
-        if: github.event_name == 'pull_request' && matrix.base == 'debian'
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          RESULT: ${{ needs.build.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          docker build \
-            --target base \
-            -t "ghcr.io/esphome/docker-base:${{ matrix.base }}-pr-${{ github.event.pull_request.number }}" \
-            -f ./${{ matrix.base }}/Dockerfile \
-            ./${{ matrix.base }}
+          if ! id=$(gh api "repos/$REPO/releases?per_page=100" --jq '[.[] | select(.draft and .target_commitish == env.SHA)][0].id // empty'); then
+            echo "::error::Failed to list releases."
+            exit 1
+          fi
+          if [ -z "$id" ]; then
+            msg="No draft release targets commit $SHA (superseded by a newer push), nothing to update."
+            echo "::notice::$msg"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
-      - name: Build ha-addon image (local)
-        if: github.event_name == 'pull_request' && matrix.base == 'debian'
-        run: |
-          docker build \
-            --target ha-addon \
-            -t "ghcr.io/esphome/docker-base:${{ matrix.base }}-ha-addon-pr-${{ github.event.pull_request.number }}" \
-            -f ./${{ matrix.base }}/Dockerfile \
-            ./${{ matrix.base }}
+          if [ "$RESULT" = "success" ]; then
+            status=""
+          else
+            status="> [!CAUTION]
+          > The image build for this draft failed (${RUN_URL}). Do not publish this release. Fix the build, or re-run the failed jobs."
+          fi
 
-      - name: Clone ESPHome repository
-        if: github.event_name == 'pull_request' && matrix.base == 'debian'
-        uses: actions/checkout@v7.0.1
-        with:
-          repository: esphome/esphome
-          ref: dev
-          path: esphome
+          if ! release=$(gh api "repos/$REPO/releases/$id"); then
+            echo "::error::Failed to fetch draft release $id."
+            exit 1
+          fi
+          tag_name=$(jq -r '.tag_name' <<< "$release")
+          if [[ "$tag_name" == untagged-* ]]; then
+            echo "::error::Draft release $id has lost its tag ($tag_name). Re-run the Release Drafter workflow to restore it."
+            exit 1
+          fi
+          body=$(jq -r '.body // ""' <<< "$release")
+          start="<!-- build-status -->"
+          end="<!-- /build-status -->"
+          if [[ "$body" != *"$start"* || "$body" != *"$end"* ]]; then
+            echo "::warning::Draft release $id has no build-status markers, leaving it unchanged."
+            exit 0
+          fi
 
-      - name: Build ESPHome image
-        if: github.event_name == 'pull_request' && matrix.base == 'debian'
-        run: |
-          docker build \
-            --target final \
-            --build-arg BUILD_TYPE=docker \
-            --build-arg BUILD_VERSION=ci \
-            --build-arg "BUILD_OS=${{ matrix.base }}" \
-            --build-arg "BUILD_BASE_VERSION=pr-${{ github.event.pull_request.number }}" \
-            -t esphome-test:latest \
-            -f ./esphome/docker/Dockerfile \
-            ./esphome
+          # Replace everything between the markers, keeping the markers so a re-run can update it again
+          block="$start"$'\n'
+          if [ -n "$status" ]; then
+            block+="$status"$'\n'
+          fi
+          block+="$end"
+          body="${body%%"$start"*}${block}${body#*"$end"}"
 
-      - name: Compile test ESP32 config
-        if: github.event_name == 'pull_request' && matrix.base == 'debian'
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}/tests:/tests \
-            esphome-test:latest \
-            compile /tests/test-esp32.yaml
+          # Re-send the draft's tag, name and target with the new body: a PATCH to a draft
+          # without tag_name resets its tag to an untagged-* placeholder
+          jq --arg body "$body" \
+            '{tag_name, name, target_commitish, prerelease, draft: true, body: $body}' <<< "$release" \
+            | gh api -X PATCH "repos/$REPO/releases/$id" --input - > /dev/null
+
+          if [ "$RESULT" = "success" ]; then
+            echo "Draft release $id: images built for $SHA, warning cleared." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Draft release $id: image build for $SHA did not succeed ($RESULT), failure notice added." >> "$GITHUB_STEP_SUMMARY"
+          fi

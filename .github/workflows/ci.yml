@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-images.yml
+    with:
+      image: ghcr.io/${{ github.event.pull_request.head.repo.full_name }}
+      tag: pr-${{ github.event.pull_request.number }}
+      best-effort-push: true
+
+  integration:
+    name: ESPHome integration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # Integration test: build ESPHome on top of the base image
+      - name: Build base image (local)
+        run: |
+          docker build \
+            --target base \
+            -t "ghcr.io/esphome/docker-base:debian-pr-${PR_NUMBER}" \
+            -f ./debian/Dockerfile \
+            ./debian
+
+      - name: Build ha-addon image (local)
+        run: |
+          docker build \
+            --target ha-addon \
+            -t "ghcr.io/esphome/docker-base:debian-ha-addon-pr-${PR_NUMBER}" \
+            -f ./debian/Dockerfile \
+            ./debian
+
+      - name: Clone ESPHome repository
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: esphome/esphome
+          ref: dev
+          path: esphome
+
+      - name: Build ESPHome image
+        run: |
+          docker build \
+            --target final \
+            --build-arg BUILD_TYPE=docker \
+            --build-arg BUILD_VERSION=ci \
+            --build-arg "BUILD_OS=debian" \
+            --build-arg "BUILD_BASE_VERSION=pr-${PR_NUMBER}" \
+            -t esphome-test:latest \
+            -f ./esphome/docker/Dockerfile \
+            ./esphome
+
+      - name: Compile test ESP32 config
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          docker run --rm \
+            -v "${WORKSPACE}/tests:/tests" \
+            esphome-test:latest \
+            compile /tests/test-esp32.yaml
