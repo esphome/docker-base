@@ -82,7 +82,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/build-images.yml
+    uses: $/.github/workflows/build-images.yml
     with:
       ref: ${{ needs.prepare.outputs.ref }}
       image: ghcr.io/${{ github.repository }}

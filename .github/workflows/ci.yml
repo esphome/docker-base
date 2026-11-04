@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/build-images.yml
+    uses: $/.github/workflows/build-images.yml
     with:
       image: ghcr.io/${{ github.event.pull_request.head.repo.full_name }}
       tag: pr-${{ github.event.pull_request.number }}
