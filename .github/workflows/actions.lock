@@ -3,12 +3,23 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
 workflows:
-    '.github/workflows/build.yml':
+    '.github/workflows/build-images.yml':
         - 'actions/checkout@v7.0.1'
         - 'docker/build-push-action@v7.4.0'
         - 'docker/login-action@v4.7.0'
         - 'docker/setup-buildx-action@v4.4.1'
         - 'docker/setup-qemu-action@v4.4.0'
+    '.github/workflows/build.yml':
+        - 'actions/create-github-app-token@v3.3.0'
+    '.github/workflows/ci.yml':
+        - 'actions/checkout@v7.0.1'
+    '.github/workflows/release-drafter.yml':
+        - 'actions/create-github-app-token@v3.3.0'
+        - 'release-drafter/release-drafter@v7.10.0'
+    '.github/workflows/release.yml':
+        - 'actions/create-github-app-token@v3.3.0'
+        - 'docker/login-action@v4.7.0'
+        - 'docker/setup-buildx-action@v4.4.1'
     '.github/workflows/renovate.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/create-github-app-token@v3.3.0'
@@ -46,6 +57,11 @@ dependencies:
         commit: 'sha1-99012661954931238ded8c8b007157a8430204e1'
         owner_id: 5429470
         repo_id: 288487894
+    'release-drafter/release-drafter@v7.10.0':
+        ref: 'v7.10.0'
+        commit: 'sha1-978bb0b30c5ee8cdd332ced253758157150d43f0'
+        owner_id: 58292376
+        repo_id: 139022359
     'renovatebot/github-action@v46.3.10':
         ref: 'v46.3.10'
         commit: 'sha1-2804199d260ad00c1fae0e9e842888369391c776'

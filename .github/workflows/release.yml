@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  tag-images:
+    name: ${{ matrix.base }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        base:
+          - debian
+    steps:
+      - name: Generate a token
+        id: app-token
+        uses: actions/create-github-app-token@v3.3.0
+        with:
+          client-id: ${{ vars.ESPHOME_GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ESPHOME_GITHUB_APP_PRIVATE_KEY }}
+          permission-contents: read
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Log in to the GitHub container registry
+        uses: docker/login-action@v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag images with the release version
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+          IMAGE: ghcr.io/${{ github.repository }}
+          BASE: ${{ matrix.base }}
+        run: |
+          IMAGE="${IMAGE,,}"
+          if [[ "$TAG" == untagged-* ]]; then
+            echo "::error::Release was published with a placeholder tag ($TAG); the draft lost its tag before publishing. Not tagging images."
+            exit 1
+          fi
+          if ! sha=$(gh api "repos/$REPO/commits/$TAG" --jq .sha); then
+            echo "::error::Failed to resolve the commit for tag $TAG."
+            exit 1
+          fi
+
+          for src in "$IMAGE:$BASE-$sha" "$IMAGE:$BASE-ha-addon-$sha"; do
+            if ! docker buildx imagetools inspect "$src" > /dev/null; then
+              echo "::error::The Build workflow did not produce images for commit $sha ($src is missing). The release was published before its build succeeded, or for a commit that was never drafted."
+              exit 1
+            fi
+          done
+
+          docker buildx imagetools create -t "$IMAGE:$BASE-$TAG" "$IMAGE:$BASE-$sha"
+          docker buildx imagetools create -t "$IMAGE:$BASE-ha-addon-$TAG" "$IMAGE:$BASE-ha-addon-$sha"
+
+          {
+            echo "Tagged images for commit \`$sha\`:"
+            echo ""
+            echo "- \`$IMAGE:$BASE-$TAG\`"
+            echo "- \`$IMAGE:$BASE-ha-addon-$TAG\`"
+          } >> "$GITHUB_STEP_SUMMARY"
