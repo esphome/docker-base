@@ -15,7 +15,7 @@ workflows:
         - 'actions/checkout@v7.0.1'
     '.github/workflows/release-drafter.yml':
         - 'actions/create-github-app-token@v3.3.0'
-        - 'release-drafter/release-drafter@v7.10.0'
+        - 'release-drafter/release-drafter@v7.11.0'
     '.github/workflows/release.yml':
         - 'actions/create-github-app-token@v3.3.0'
         - 'docker/login-action@v4.7.0'
@@ -57,9 +57,9 @@ dependencies:
         commit: 'sha1-99012661954931238ded8c8b007157a8430204e1'
         owner_id: 5429470
         repo_id: 288487894
-    'release-drafter/release-drafter@v7.10.0':
-        ref: 'v7.10.0'
-        commit: 'sha1-978bb0b30c5ee8cdd332ced253758157150d43f0'
+    'release-drafter/release-drafter@v7.11.0':
+        ref: 'v7.11.0'
+        commit: 'sha1-d1a19e60e81a7e650d00a7de9277f87e439117ea'
         owner_id: 58292376
         repo_id: 139022359
     'renovatebot/github-action@v46.3.10':
