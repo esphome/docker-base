@@ -12,7 +12,7 @@ RUN \
       openssh-client=1:10.0p1-7+deb13u4 \
       libcairo2=1.18.4-1+b1 \
       libmagic1t64=1:5.46-5 \
-      patch=2.8-2 \
+      patch=2.8-2+deb13u1 \
       build-essential=12.12 \
       libssl-dev=3.5.7-1~deb13u3 \
       libusb-1.0-0=2:1.0.28-1 \
